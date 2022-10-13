@@ -8,24 +8,33 @@ This project is a dockerized version of the [PiShrink bash script](https://githu
 
 ![Release][release-install-shield] [![License][license-shield]](LICENSE.md)
 
+# AutoPi Instructions.
+
+## Building
+
+Before you can use this tool, you need to build and tag the docker container with the following commands.
+```bash
+docker build . --tag autopi/pishrink:v1
+```
+
 ## Usage
 
-1. Make a copy of a Raspberry Pi SD card that you want to shrink ([see instructions here](https://github.com/mgomesborges/raspberry-pi/blob/master/setup/clone-sd-card.md)).
-
-2. Using the Terminal, access the directory containing the Raspberry Pi image:
+1. Using the Terminal, access the directory containing the Raspberry Pi image:
 
     ```bash
     cd ~/Directory-with-RPi-image
     ```
 
-3. Run PiShrink dockerized:
-
+2. Run PiShrink dockerized:
     ```bash
-    docker run --privileged=true --rm \
-        --volume $(pwd):/workdir \
-        mgomesborges/pishrink \
-        pishrink -pZv IMAGE.img NEW-IMAGE.img
+    docker run --privileged=true --rm --volume $(pwd):/workdir autopi/pishrink:v1 pishrink -zpdv SOURCE_IMAGE.img OUTPUT_IMAGE.img
     ```
+
+    Example
+    ```bash
+    docker run --privileged=true --rm --volume $(pwd):/workdir autopi/pishrink:v1 pishrink -zpdv autopi_core_tmu_260722_v1-22_prepared_TENANT.img autopi_core_tmu_260722_v1-22_prepared_SHRINKED.img
+    ```
+3. Now the output is shrinked and compressed, and can be used in the image build process.
 
 ## PiShrink options
 

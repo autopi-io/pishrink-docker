@@ -3,6 +3,7 @@
 version="v0.1.2"
 
 CURRENT_DIR="$(pwd)"
+CURRENT_DIR_NAME=$(basename "$(pwd)")
 SCRIPTNAME="${0##*/}"
 MYNAME="${SCRIPTNAME%.*}"
 LOGFILE="${CURRENT_DIR}/${SCRIPTNAME%.*}.log"
@@ -17,7 +18,7 @@ function info() {
 }
 
 function error() {
-	echo -n "$SCRIPTNAME: ERROR occurred in line $1: "
+	echo -n "$SCRIPTNAME: ERROR occured in line $1: "
 	shift
 	echo "$@"
 }
@@ -221,14 +222,6 @@ if (( EUID != 0 )); then
   exit 3
 fi
 
-# set locale to POSIX(English) temporarily
-# these locale settings only affect the script and its sub processes
-
-export LANGUAGE=POSIX
-export LC_ALL=POSIX
-export LANG=POSIX
-
-
 # check selected compression tool is supported and installed
 if [[ -n $ziptool ]]; then
 	if [[ ! " ${ZIPTOOLS[@]} " =~ $ziptool ]]; then
@@ -316,7 +309,53 @@ if [[ $prep == true ]]; then
   info "Syspreping: Removing logs, apt archives, dhcp leases and ssh hostkeys"
   mountdir=$(mktemp -d)
   mount "$loopback" "$mountdir"
-  rm -rvf $mountdir/var/cache/apt/archives/* $mountdir/var/lib/dhcpcd5/* $mountdir/var/log/* $mountdir/var/tmp/* $mountdir/tmp/* $mountdir/etc/ssh/*_host_*
+
+  echo "Sleeping for 5 seconds ....."
+  sleep 5s
+
+  echo "removing apt cache, dhcp leases, logs, /var/tmp/*, /tmp/*, /etc/ssh/*_host_*"
+  sudo rm -r -f "$mountdir/var/cache/apt/archives/*" "$mountdir/var/lib/dhcpcd5/*" "$mountdir/var/log/*" "$mountdir/var/tmp/*" "$mountdir/tmp/*" "$mountdir/etc/ssh/*_host_*"
+
+  echo "resetting hostname to autopi-initial"
+  echo "autopi-initial" > "$mountdir/etc/hostname"
+
+  echo "removing /home/pi/.bash_history"
+  sudo rm -v -f "$moundir/home/pi/.bash_history"
+
+  echo "removing /root/.bash_history"
+  sudo rm -v -f "$mountdir/root/.bash_history"
+
+  echo "removing /var/log/salt/minion*"
+  sudo rm -v -f "$mountdir/var/log/salt/minion*"
+
+  echo "removing /etc/salt/minion.bak"
+  sudo rm -v -f "$mountdir/etc/salt/minion.bak"
+
+  echo "removing /etc/salt/minion.d/*.bak"
+  sudo rm -v -f "$mountdir/etc/salt/minion.d/*.bak"
+
+  echo "removing /var/cache/salt/minion/last_master_ip"
+  sudo rm -v -f "$mountdir/var/cache/salt/minion/last_master_ip"
+
+  echo "removing /etc/salt/minion.d/_schedule.conf"
+  sudo rm -v -f "$mountdir/etc/salt/minion.d/_schedule.conf"
+
+  echo "removing /etc/salt/pki/minion/"
+  sudo rm -r -v -f "$mountdir/etc/salt/pki/minion/"
+
+  echo "removing /etc/salt/minion_id"
+  sudo rm -v -f "$mountdir/etc/salt/minion_id"
+
+  echo "setting minion to use hub as master. Just in case.."
+  sed -i "s/master: hub01.autopi.io/master: hub/g" "$mountdir/etc/salt/minion"
+
+  echo "Writing version to image"
+  echo "$CURRENT_DIR_NAME $img" > "$mountdir/version"
+
+  echo "Waiting for manual changes. MountDir: $mountdir  Press any key to unmount."
+  read -n 1 -s
+
+  echo "Unmounting"
   umount "$mountdir"
 fi
 
